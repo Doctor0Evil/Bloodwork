@@ -1,0 +1,46 @@
+function result = validate_nanoswarm_node(node)
+% node: struct with fields as below (production, non-hypothetical)
+%   node_id, ops_threshold_tops, topology_matrix (NxN double),
+%   compliance_level (string), ai_firmware_version (string),
+%   tissue_temp_max_c, power_density_max_mw_cm2, em_exposure_max_v_m,
+%   biocompatibility_matrix (4x4 double), firmware_sha256_hex (char[64])
+
+compute_ok   = node.ops_threshold_tops >= 12.0;
+topology_vec = node.topology_matrix(:);
+topo_ok      = nnz(abs(topology_vec) >= 1e-9) >= 8;
+
+compliance_ok = any(strcmp(node.compliance_level, ...
+    {'clinical-trial','surgical-grade','implantable-ISO14708'}));
+
+fw_ok = ischar(node.firmware_sha256_hex) ...
+    && numel(node.firmware_sha256_hex) == 64 ...
+    && all(ismember(lower(node.firmware_sha256_hex), '0123456789abcdef'));
+
+bio_min = min(node.biocompatibility_matrix(:));
+bio_ok  = bio_min >= 0.90;
+
+safe_temp  = node.tissue_temp_max_c <= 39.0;
+safe_power = node.power_density_max_mw_cm2 <= 50.0;
+safe_em    = node.em_exposure_max_v_m <= 61.0;
+
+all_ok = compute_ok && topo_ok && compliance_ok && fw_ok && bio_ok ...
+         && safe_temp && safe_power && safe_em;
+
+zero_fraction = 1.0;
+if numel(topology_vec) > 0
+    zero_fraction = sum(abs(topology_vec) < 1e-9) / numel(topology_vec);
+end
+
+result.validation_status = all_ok;
+result.system_metrics = struct( ...
+    'node_id', node.node_id, ...
+    'ops_threshold_tops', node.ops_threshold_tops, ...
+    'topology_sparsity', zero_fraction, ...
+    'biocompatibility_min', bio_min, ...
+    'tissue_temp_max_c', node.tissue_temp_max_c, ...
+    'power_density_max_mw_cm2', node.power_density_max_mw_cm2, ...
+    'em_exposure_max_v_m', node.em_exposure_max_v_m, ...
+    'compliance_level', node.compliance_level, ...
+    'ai_firmware_version', node.ai_firmware_version ...
+    );
+end
