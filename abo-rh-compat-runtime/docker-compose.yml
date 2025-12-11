@@ -1,0 +1,22 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: abo
+      POSTGRES_USER: abo
+      POSTGRES_DB: abo
+    ports:
+      - "5432:5432"
+  abo_api:
+    build: ./backend/rust
+    depends_on: [db]
+    environment:
+      PGURL: postgres://abo:abo@db:5432/abo
+    ports:
+      - "8080:8080"
+  gateway:
+    build: ./http/go
+    depends_on: [abo_api]
+    ports:
+      - "8090:8090"

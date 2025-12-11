@@ -1,0 +1,12 @@
+.vscode/
+/.idea/
+# gitignore
+/target
+/.idea
+/.vscode
+/node_modules
+*.log
+.DS_Store
+.env
+.env.*
+/dist

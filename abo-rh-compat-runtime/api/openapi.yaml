@@ -1,0 +1,221 @@
+openapi: 3.0.3
+info:
+  title: ABO/Rh Compatibility Runtime
+  version: 0.1.0
+paths:
+  /compatibility/example:
+    get:
+      summary: Example compatibility evaluation
+      responses:
+        '200':
+          description: Compatibility result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompatibilityResult'
+          /calibration/descriptor:
+            get:
+              summary: Calibration registry descriptor
+              responses:
+                '200':
+                  description: Descriptor summary
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/CalibrationDescriptorSummary'
+          /calibration/device-families:
+            get:
+              summary: List calibration device families
+              responses:
+                '200':
+                  description: List of device family profiles
+                  content:
+                    application/json:
+                      schema:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DeviceFamilyProfile'
+          /calibration/bodytrack-profiles:
+            get:
+              summary: List body tracking calibration profiles
+              responses:
+                '200':
+                  description: List of body tracking calibration profiles
+                  content:
+                    application/json:
+                      schema:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/BodyTrackingCalibrationProfile'
+          /calibration/biosense-profiles:
+            get:
+              summary: List biosensing calibration profiles
+              responses:
+                '200':
+                  description: List of biosense calibration profiles
+                  content:
+                    application/json:
+                      schema:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/BiosenseCalibrationProfile'
+          /calibration/logistics-profiles:
+            get:
+              summary: List calibration logistics profiles
+              responses:
+                '200':
+                  description: List of calibration logistics profiles
+                  content:
+                    application/json:
+                      schema:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CalibrationLogisticsProfile'
+components:
+  schemas:
+    ABO:
+      type: string
+      enum: [O, A, B, AB]
+    Rh:
+      type: string
+      enum: [NEG, POS]
+    CompatibilityClass:
+      type: string
+      enum: [SAFE, CONDITIONAL, UNSAFE]
+    RationaleCode:
+      type: string
+      enum: [ABO_MATCH, ABO_COMPATIBLE, ABO_MISMATCH, RH_MATCH, RH_MISMATCH, POLICY_EXCEPTION, OTHER]
+    BloodType:
+      type: object
+      properties:
+        abo:
+          $ref: '#/components/schemas/ABO'
+        rh:
+          $ref: '#/components/schemas/Rh'
+      required: [abo, rh]
+    CompatibilityResult:
+      type: object
+      properties:
+        donor:
+          $ref: '#/components/schemas/BloodType'
+        recipient:
+          $ref: '#/components/schemas/BloodType'
+        class_:
+          $ref: '#/components/schemas/CompatibilityClass'
+        abo_ok:
+          type: boolean
+        rh_ok:
+          type: boolean
+        rationale:
+          $ref: '#/components/schemas/RationaleCode'
+      required: [donor, recipient, class_, abo_ok, rh_ok, rationale]
+    CalibrationDescriptorSummary:
+      type: object
+      properties:
+        registry_label:
+          type: string
+        registry_version:
+          type: string
+        compliance_tag:
+          type: string
+      required: [registry_label, registry_version, compliance_tag]
+    DeviceFamilyProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        family_code:
+          type: string
+        class:
+          type: string
+        modality_tags:
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+        requires_3d_reference:
+          type: boolean
+        requires_physical_phantom:
+          type: boolean
+        iso13485_relevant:
+          type: boolean
+      required: [id, family_code, class, modality_tags, description]
+    BodyTrackingCalibrationProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        family_code:
+          type: string
+        description:
+          type: string
+        min_markers_or_sensors:
+          type: integer
+        max_markers_or_sensors:
+          type: integer
+        requires_full_body_sweep:
+          type: boolean
+        requires_quiet_stance:
+          type: boolean
+        target_rms_error_mm:
+          type: number
+        max_allowed_rms_error_mm:
+          type: number
+        min_calibration_duration_s:
+          type: number
+        max_calibration_duration_s:
+          type: number
+      required: [id, family_code, description]
+    BiosenseCalibrationProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        family_code:
+          type: string
+        description:
+          type: string
+        min_analytes:
+          type: integer
+        max_analytes:
+          type: integer
+        requires_reference_controls:
+          type: boolean
+        requires_temp_compensation:
+          type: boolean
+        target_bias_pct:
+          type: number
+        max_allowed_bias_pct:
+          type: number
+        target_cv_pct:
+          type: number
+        max_allowed_cv_pct:
+          type: number
+        max_interval_days:
+          type: integer
+      required: [id, family_code, description]
+    CalibrationLogisticsProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        facility_type:
+          type: string
+        description:
+          type: string
+        min_staff_trained:
+          type: integer
+        requires_dedicated_room:
+          type: boolean
+        requires_force_plate_or_phantom:
+          type: boolean
+        requires_traceable_id:
+          type: boolean
+        requires_audit_log:
+          type: boolean
+      required: [id, facility_type, description]

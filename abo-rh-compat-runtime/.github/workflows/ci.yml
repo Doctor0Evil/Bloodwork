@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: actions/setup-rust@v1
+        with:
+          rust-version: stable
+
+      - name: Build & test Rust workspace
+        run: |
+          cd backend/rust
+          cargo build --workspace --release
+          cargo test --workspace
+
+      - name: Rust formatting check
+        run: |
+          cd backend/rust
+          rustup component add rustfmt || true
+          cargo fmt --all -- --check
+
+      - name: Rust clippy
+        run: |
+          cd backend/rust
+          rustup component add clippy || true
+          cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build Go gateway
+        run: |
+          cd http/go
+          go build ./...
+
+      - name: Go tests
+        run: |
+          cd http/go
+          go test ./...
+
+      - name: Go vet
+        run: |
+          cd http/go
+          go vet ./...
+
+      - name: Generate blueprint hash
+        run: |
+          chmod +x tools/generate_blueprint.sh
+          ./tools/generate_blueprint.sh
+          cat BLUEPRINT/SHA256.txt

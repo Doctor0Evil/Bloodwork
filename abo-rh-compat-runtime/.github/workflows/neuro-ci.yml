@@ -1,0 +1,53 @@
+name: neurotech-bci-eeg-mci-ci
+
+on:
+  push:
+    branches: [ main, trunk, 'feat/**' ]
+  pull_request:
+    branches: [ main, trunk ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Rust fmt & clippy
+        working-directory: backend/rust
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Rust tests
+        working-directory: backend/rust
+        run: cargo test --workspace --all-features -- --nocapture
+
+      - name: Go fmt, vet, test
+        working-directory: backend/go
+        run: |
+          go fmt ./...
+          go vet ./...
+          go test ./... -run . -v
+
+      - name: Generate BLUEPRINT and SHA256
+        working-directory: tools
+        run: |
+          chmod +x ./generate_blueprint.sh || true
+          ./generate_blueprint.sh || ./generate_blueprint.ps1
+
+      - name: Upload BLUEPRINT artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: blueprint-bundle
+          path: |
+            BLUEPRINT/BLUEPRINT.json
+            BLUEPRINT/SHA256.txt
