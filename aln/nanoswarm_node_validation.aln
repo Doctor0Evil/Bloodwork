@@ -1,0 +1,62 @@
+ENTITY NanoswarmNode {
+    node_id: STRING(64) REQUIRED;                 # Unique nanoswarm node identifier
+    ops_threshold_tops: FLOAT64 MIN 0.100;        # Compute throughput (TOPS)
+    topology_matrix: MATRIX64[4,4];               # Example 4x4 QPU/mesh adjacency matrix
+    compliance_level: ENUM {
+        research-grade,
+        clinical-trial,
+        surgical-grade,
+        implantable-ISO14708
+    } REQUIRED;
+    ai_firmware_version: STRING(32) PATTERN "^[A-Z0-9]+\\.[0-9]+\\.[0-9]+$";
+
+    # Biomedical safety envelope (ISO 14708, IEC 60601, ICNIRP EM fields)
+    tissue_temp_max_c: FLOAT32 RANGE [35.0, 41.0];
+    power_density_max_mw_cm2: FLOAT32 MAX 100.00;
+    em_exposure_max_v_m: FLOAT32 MAX 61.00;
+
+    # ISO 10993 biocompatibility matrix (cytotoxicity, sensitization, irritation, systemic toxicity)
+    biocompatibility_matrix: MATRIX32[4,4];  # Rows: {ISO10993-5, -10, -11, -12}; Cols: score 0–1.0
+
+    # Hexadecimal dataset for deterministic firmware integrity
+    firmware_sha256_hex: HEXSTRING(64);
+
+    # Behavior tree policy reference for neuromorphic interfaces
+    behavior_tree_id: STRING(64);
+}
+
+FUNCTION ValidateNanoswarmNode(input: NanoswarmNode)
+RETURNS {
+    validation_status: BOOLEAN;
+    system_metrics: MAP;
+} {
+    LET compute_ok = (input.ops_threshold_tops >= 12.0);
+    LET topo_ok = MATRIX_NONZERO_COUNT(input.topology_matrix) >= 8;
+    LET compliance_ok = (input.compliance_level IN { clinical-trial, surgical-grade, implantable-ISO14708 });
+    LET fw_ok = HEX_LEN(input.firmware_sha256_hex) == 64;
+
+    LET bio_min = MATRIX_MIN(input.biocompatibility_matrix);
+    LET bio_ok = (bio_min >= 0.90);
+
+    LET safe_temp = (input.tissue_temp_max_c <= 39.0);
+    LET safe_power = (input.power_density_max_mw_cm2 <= 50.0);
+    LET safe_em = (input.em_exposure_max_v_m <= 61.0);
+
+    LET all_ok = compute_ok AND topo_ok AND compliance_ok AND fw_ok
+                 AND bio_ok AND safe_temp AND safe_power AND safe_em;
+
+    RETURN {
+        validation_status: all_ok;
+        system_metrics: {
+            "node_id": input.node_id,
+            "ops_threshold_tops": input.ops_threshold_tops,
+            "topology_sparsity": MATRIX_ZERO_FRACTION(input.topology_matrix),
+            "biocompatibility_min": bio_min,
+            "tissue_temp_max_c": input.tissue_temp_max_c,
+            "power_density_max_mw_cm2": input.power_density_max_mw_cm2,
+            "em_exposure_max_v_m": input.em_exposure_max_v_m,
+            "compliance_level": STR(input.compliance_level),
+            "ai_firmware_version": input.ai_firmware_version
+        }
+    };
+}
